@@ -1,0 +1,75 @@
+## @file
+#   A simple, basic, application showing how the Hello application could be
+#   built using the "Standard C Libraries" from StdLib.
+#
+#  Copyright (c) 2010 - 2014, Intel Corporation. All rights reserved.<BR>
+#  This program and the accompanying materials
+#  are licensed and made available under the terms and conditions of the BSD License
+#  which accompanies this distribution. The full text of the license may be found at
+#  http://opensource.org/licenses/bsd-license.
+#
+#  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010006
+  BASE_NAME                      = SmbiosReader
+  FILE_GUID                      = 14a231ea-7ec9-481f-8251-e596722af228
+  MODULE_TYPE                    = UEFI_APPLICATION
+  VERSION_STRING                 = 0.1
+  ENTRY_POINT                    = ShellCEntryLib
+
+#
+#  VALID_ARCHITECTURES           = IA32 X64
+#
+
+[Sources]
+  HW7_SMBIOSRead.c
+
+[Packages]
+  StdLib/StdLib.dec
+  MdePkg/MdePkg.dec
+  ShellPkg/ShellPkg.dec
+
+[LibraryClasses]
+  LibC
+  LibStdio
+  
+  #MemoryAllocationLib
+  #BaseLib
+  #BaseMemoryLib
+  
+ # IoLib
+ # DebugLib
+  #ShellCommandLib
+  UefiShellDebug1CommandsLib
+  ShellLib
+ # UefiLib
+ # UefiRuntimeServicesTableLib
+ # UefiBootServicesTableLib
+ # SortLib
+ # PrintLib
+ # BcfgCommandLib 
+  
+  
+[Pcd]
+  gEfiShellPkgTokenSpaceGuid.PcdShellProfileMask              ## CONSUMES
+  gEfiShellPkgTokenSpaceGuid.PcdShellFileOperationSize        ## CONSUMES
+  gEfiMdePkgTokenSpaceGuid.PcdMaximumUnicodeStringLength      ## CONSUMES
+
+[Protocols]
+  gEfiPciRootBridgeIoProtocolGuid             ## SOMETIMES_CONSUMES
+  gEfiBlockIoProtocolGuid                     ## SOMETIMES_CONSUMES
+  gEfiSimplePointerProtocolGuid               ## SOMETIMES_CONSUMES
+  gEfiCpuIo2ProtocolGuid                      ## SOMETIMES_CONSUMES
+
+[Guids]
+  gEfiGlobalVariableGuid          ## SOMETIMES_CONSUMES ## GUID
+  gEfiSmbiosTableGuid             ## SOMETIMES_CONSUMES ## SystemTable
+  gEfiSmbios3TableGuid            ## SOMETIMES_CONSUMES ## SystemTable
+  gEfiMpsTableGuid                ## SOMETIMES_CONSUMES ## SystemTable
+  gEfiSalSystemTableGuid          ## SOMETIMES_CONSUMES ## SystemTable
+  gEfiAcpi10TableGuid             ## SOMETIMES_CONSUMES ## SystemTable
+  gEfiAcpi20TableGuid             ## SOMETIMES_CONSUMES ## SystemTable
+  gShellDebug1HiiGuid             ## SOMETIMES_CONSUMES ## HII
