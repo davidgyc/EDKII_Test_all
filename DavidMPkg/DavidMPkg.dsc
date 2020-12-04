@@ -85,7 +85,7 @@
 #  DavidMPkg\HW3_DavidUsedArgument\HW3_DavidUsedArgument.inf
 #  DavidMPkg\HW4_DavidInputData\HW4_DavidInputData.inf
 #  DavidMPkg\HW6_IO_Test\HW6_IO_Test.inf
-  DavidMPkg\HW7_SMBIOS\HW7_SMBIOSRead.inf
-  
+#  DavidMPkg\HW7_SMBIOS\HW7_SMBIOSRead.inf
+  DavidMPkg\HW8_SPITool\HW8_SPITool.inf
 !include StdLib/StdLib.inc
 !include AppPkg/Applications/Sockets/Sockets.inc

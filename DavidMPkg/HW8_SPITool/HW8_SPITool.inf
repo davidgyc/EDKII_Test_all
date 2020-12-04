@@ -14,8 +14,8 @@
 
 [Defines]
   INF_VERSION                    = 0x00010006
-  BASE_NAME                      = SmbiosReader
-  FILE_GUID                      = ef5798d6-de22-4b8d-8093-32733a5b6bfd
+  BASE_NAME                      = SPITool
+  FILE_GUID                      = fda8508f-1067-4fe8-aff1-edec83fcbc9e
   MODULE_TYPE                    = UEFI_APPLICATION
   VERSION_STRING                 = 0.1
   ENTRY_POINT                    = ShellCEntryLib
@@ -25,8 +25,10 @@
 #
 
 [Sources]
-  HW7_SMBIOSRead.c
-
+  HW8_SPITool.c
+[Sources.X64]
+  HW8_IO_Lib.asm
+   
 [Packages]
   StdLib/StdLib.dec
   MdePkg/MdePkg.dec
