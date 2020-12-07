@@ -5,6 +5,7 @@
 #define DebugFlag
 #define Value32Init 0x00000000
 #define MMCFG_BASE 0x00,0x00,0x00,0x90
+#define ForInit 0x00
 UINT64 IOReadCfgAsm(IN UINT64 bdfr);
 UINT32 ReadCfgByIO(UINT8 uBus, UINT8 uDevice, UINT8 uFunction,UINT8 uRegister);
 //move to .h when complete
@@ -35,6 +36,19 @@ UINT32 FDV :1;
 UINT32 FLOCKDN :1;
 UINT32 FGO :1;
 UINT32 FCYCLE :4;
+/*FLASH Cycle (FCYCLE):
+0 Read (1 up to 64 bytes by setting FDBC)
+1 Reserved
+2 Write (1 up to 64 bytes by setting FDBC)
+3 4k Block Erase
+4 64k Sector erase
+5 Read SFDP
+6 Read JEDEC ID
+7 write status
+8 read status
+9 RPMC Op1
+A RPMC Op2
+*/
 UINT32 WET :1;
 UINT32 RSVD2 :2;
 UINT32 FDBC :6;
@@ -66,27 +80,75 @@ UINT32 BIOS_FDATA14;
 UINT32 BIOS_FDATA15; 
 } SPI_STRUC_H;
 
-int main (IN int Argc,IN char **Argv){
- UINT32 MmcfgBar=Value32Init;
- printf("!!SPI tool for lewisburg!!\r\n");
- //ReadCfg(IN UINT64 bdfr) !need to check F1:05 DID
- //UINT32 *SpiAdd,pAdd=0x800FD010 ; //!HC need to fix
-//ReadCfgByIO(0x00,0x00,0x00,0x90);
- MmcfgBar =ReadCfgByIO(MMCFG_BASE);
- #ifdef DebugFlag
- printf("Main.CFGReg:0x%x\r\n",ReadCfgByIO(MMCFG_BASE));
- #ifdef DebugFlag
+enum FCYCLE_status{
+ Read=0,
+ Reserved,
+ Write,
+ _4kBlockErase,
+ _64kSectorErase,
+ ReadSfpd,
+ ReadJedecId,
+ WriteStatus,
+ ReadStatus,
+ RpmcOp1,
+ RpmcOp2
+};
 
+int main (IN int Argc,IN char **Argv){
+ UINT32 MmcfgBar =Value32Init, FlashAddress =Value32Init,DataCount =Value32Init;
+ UINT8 *DP=Value32Init; 
+ UINT32 SpiAdd=0x800FD010 ; //!HC need to fix
+ SPI_STRUC_H *SpiBar0=Value32Init;
+ printf("!!SPI tool for lewisburg!!\r\n");
+ //ReadCfg(IN UINT64 bdfr) !need to check F1:05 DID A1A4 QS A224 ES
+ printf("enter Flash Address(HEX)[0-FFFFFFFF]:\r\n0x");
+ scanf("%x",&FlashAddress);
+ printf("\r\nenter Flash Address(Dec)[1-64]:\r\n");
+ scanf("%d",&DataCount);
+ if (DataCount!=0){
+  DataCount--;
+ MmcfgBar =ReadCfgByIO(MMCFG_BASE);
+ SpiAdd=ReadCfgByIO(0,31,5,0x10);
+ #ifdef DebugFlagn
+ printf("DBG Bar0:0x%x\r\n",SpiAdd);
+ #endif
+  SpiBar0 = (SPI_STRUC_H*)SpiAdd;
+  DP = (UINT8*)(SpiAdd+0x10);
+ SpiBar0->BIOS_FADDR=0;
+ SpiBar0->BIOS_HSFSTS_CTL.FDBC=4;
+ SpiBar0->BIOS_HSFSTS_CTL.FCYCLE=0;
+ SpiBar0->BIOS_HSFSTS_CTL.FGO=1;
+ while(SpiBar0->BIOS_HSFSTS_CTL.FGO)printf("Wait to Ready\n\r");
+ printf("BIOS sign:0x%08X\r\n",SpiBar0->BIOS_FDATA04);
  
- //printf("CFG Reg:0x%x\r\n",IOReadCfgAsm(0x80000090));
- //SpiAdd = (UINT32*)pAdd;
-// printf("SPI BAR0:0x%x\r\n",*SpiAdd); 
+ SpiBar0->BIOS_FADDR=FlashAddress;
+ SpiBar0->BIOS_HSFSTS_CTL.FDBC=DataCount;
+ SpiBar0->BIOS_HSFSTS_CTL.FCYCLE=0;
+ SpiBar0->BIOS_HSFSTS_CTL.FGO=1;
+ while(SpiBar0->BIOS_HSFSTS_CTL.FGO)printf("Wait to Ready\n\r");
+ 
+ #define userSL DataCount+1
+ #define sNumPerLine 0x10
+ #define sLineHead   0x00
+ #define sEndAll     userSL-1
+ printf("FlashAddress:0x%x\r\n",FlashAddress);
+ printf("Offset:     ");for(UINT8 xIndex=ForInit;xIndex<sNumPerLine;xIndex++)printf(" %X ",xIndex);printf("\r\n");
+ for(UINT8 xIndex=ForInit;xIndex<userSL;xIndex++ ){	
+	if(xIndex%sNumPerLine==sLineHead)//head
+      printf("       %X- : ",(xIndex/sNumPerLine));	 
+    printf("%02X ",*(DP+xIndex)); //body
+    if(xIndex%sNumPerLine==sNumPerLine-1||xIndex==sEndAll)
+      printf("\r\n"); 
+ }
+ }
+ else printf("\r\nInput error\r\n");
+
  
 return 0;
 }
 
 UINT32 ReadCfgByIO(UINT8 uBus, UINT8 uDevice, UINT8 uFunction,UINT8 uRegister){
- UINT32 cFGdATA;
+ UINT32 cFGdATA=Value32Init;
  PCI_IO_CFG_STRUCT* iOcFGs;
  iOcFGs=(PCI_IO_CFG_STRUCT*)&cFGdATA;
  iOcFGs->RegisterNumber =(uRegister&0xFC)>>2;
@@ -95,11 +157,22 @@ UINT32 ReadCfgByIO(UINT8 uBus, UINT8 uDevice, UINT8 uFunction,UINT8 uRegister){
  iOcFGs->BusNumber =uBus;
  iOcFGs->EnableConfigSpaceMapping =1;
 #ifdef DebugFlag
- printf("ReadCfgByIO.CFGData:0x%x\r\n",cFGdATA);
+
+ printf("[DBG]ReadCfgByIO.CFGData:0x%x\r\n",cFGdATA);
 #endif
 return (UINT32)IOReadCfgAsm(cFGdATA);
+//return 0;
 }
 
+ //UINT32 *SpiAdd,pAdd=0x800FD010 ; //!HC need to fix
+//ReadCfgByIO(0x00,0x00,0x00,0x90);
+
+ //printf("[DBG]Main.CFGReg:0x%x\r\n",ReadCfgByIO(MMCFG_BASE));
+ //printf("DBG FGO:0x%x\r\n",SpiBar0->BIOS_HSFSTS_CTL.FGO);
+
+ //printf("CFG Reg:0x%x\r\n",IOReadCfgAsm(0x80000090));
+ //SpiAdd = (UINT32*)pAdd;
+// printf("SPI BAR0:0x%x\r\n",*SpiAdd); 
 
  //iOcFGs->ST.RegisterNumber =(uRegister&0xFC)>>2;
  //iOcFGs->ST.FunctionNumber =uFunction&0x07;
